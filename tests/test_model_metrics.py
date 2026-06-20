@@ -1,31 +1,34 @@
-from model_metrics import ModelMetrics, compare_models, get_best_model
+from model_metrics import ModelMetrics, LLMProvider, Metric
+import pytest
 
-def test_compare_models():
-    model1 = ModelMetrics("Model 1", 0.9, 0.8, 0.7)
-    model2 = ModelMetrics("Model 2", 0.8, 0.9, 0.6)
-    comparison = compare_models(model1, model2)
-    assert comparison['accuracy'] == "Model 1 is better"
-    assert comparison['precision'] == "Model 2 is better"
-    assert comparison['recall'] == "Model 1 is better"
+def test_add_provider():
+    model_metrics = ModelMetrics()
+    provider = LLMProvider("LLM1", [Metric("accuracy", 0.9), Metric("f1", 0.8)])
+    model_metrics.add_provider(provider)
+    assert model_metrics.get_metrics("LLM1") == provider.metrics
 
-def test_compare_models_equal():
-    model1 = ModelMetrics("Model 1", 0.9, 0.8, 0.7)
-    model2 = ModelMetrics("Model 2", 0.9, 0.8, 0.7)
-    comparison = compare_models(model1, model2)
-    assert comparison['accuracy'] == "Both models are equal"
-    assert comparison['precision'] == "Both models are equal"
-    assert comparison['recall'] == "Both models are equal"
+def test_get_metrics():
+    model_metrics = ModelMetrics()
+    provider = LLMProvider("LLM1", [Metric("accuracy", 0.9), Metric("f1", 0.8)])
+    model_metrics.add_provider(provider)
+    assert model_metrics.get_metrics("LLM1") == provider.metrics
 
-def test_get_best_model():
-    model1 = ModelMetrics("Model 1", 0.9, 0.8, 0.7)
-    model2 = ModelMetrics("Model 2", 0.8, 0.9, 0.6)
-    model3 = ModelMetrics("Model 3", 0.7, 0.6, 0.5)
-    models = [model1, model2, model3]
-    best_model = get_best_model(models)
-    assert best_model.name == "Model 1"
+def test_calculate_average():
+    model_metrics = ModelMetrics()
+    provider = LLMProvider("LLM1", [Metric("accuracy", 0.9), Metric("accuracy", 0.8)])
+    model_metrics.add_provider(provider)
+    assert model_metrics.calculate_average("LLM1", "accuracy") == 0.85
 
-def test_get_best_model_single():
-    model1 = ModelMetrics("Model 1", 0.9, 0.8, 0.7)
-    models = [model1]
-    best_model = get_best_model(models)
-    assert best_model.name == "Model 1"
+def test_calculate_average_no_metrics():
+    model_metrics = ModelMetrics()
+    provider = LLMProvider("LLM1", [Metric("accuracy", 0.9)])
+    model_metrics.add_provider(provider)
+    with pytest.raises(ValueError):
+        model_metrics.calculate_average("LLM1", "f1")
+
+def test_to_json():
+    model_metrics = ModelMetrics()
+    provider = LLMProvider("LLM1", [Metric("accuracy", 0.9), Metric("f1", 0.8)])
+    model_metrics.add_provider(provider)
+    expected_json = '{"LLM1": [{"name": "accuracy", "value": 0.9}, {"name": "f1", "value": 0.8}]}'
+    assert model_metrics.to_json() == expected_json

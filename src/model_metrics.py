@@ -1,41 +1,34 @@
+import json
 from dataclasses import dataclass
-from typing import List, Dict
+from typing import Dict, List
 
 @dataclass
-class ModelMetrics:
+class Metric:
     name: str
-    accuracy: float
-    precision: float
-    recall: float
+    value: float
 
-def compare_models(model1: ModelMetrics, model2: ModelMetrics) -> Dict[str, str]:
-    comparison = {}
-    if model1.accuracy > model2.accuracy:
-        comparison['accuracy'] = f"{model1.name} is better"
-    elif model1.accuracy < model2.accuracy:
-        comparison['accuracy'] = f"{model2.name} is better"
-    else:
-        comparison['accuracy'] = "Both models are equal"
+@dataclass
+class LLMProvider:
+    name: str
+    metrics: List[Metric]
 
-    if model1.precision > model2.precision:
-        comparison['precision'] = f"{model1.name} is better"
-    elif model1.precision < model2.precision:
-        comparison['precision'] = f"{model2.name} is better"
-    else:
-        comparison['precision'] = "Both models are equal"
+class ModelMetrics:
+    def __init__(self):
+        self.providers = {}
 
-    if model1.recall > model2.recall:
-        comparison['recall'] = f"{model1.name} is better"
-    elif model1.recall < model2.recall:
-        comparison['recall'] = f"{model2.name} is better"
-    else:
-        comparison['recall'] = "Both models are equal"
+    def add_provider(self, provider: LLMProvider):
+        self.providers[provider.name] = provider.metrics
 
-    return comparison
+    def get_metrics(self, provider_name: str) -> List[Metric]:
+        return self.providers.get(provider_name, [])
 
-def get_best_model(models: List[ModelMetrics]) -> ModelMetrics:
-    best_model = models[0]
-    for model in models[1:]:
-        if model.accuracy > best_model.accuracy:
-            best_model = model
-    return best_model
+    def calculate_average(self, provider_name: str, metric_name: str) -> float:
+        metrics = self.get_metrics(provider_name)
+        metric_values = [metric.value for metric in metrics if metric.name == metric_name]
+        if not metric_values:
+            raise ValueError(f"No metrics found for {provider_name} with name {metric_name}")
+        return round(sum(metric_values) / len(metric_values), 2)
+
+    def to_json(self) -> str:
+        data = {name: [metric.__dict__ for metric in metrics] for name, metrics in self.providers.items()}
+        return json.dumps(data)
