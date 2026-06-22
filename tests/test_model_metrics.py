@@ -1,34 +1,44 @@
-from model_metrics import ModelMetrics, LLMProvider, Metric
 import pytest
+from model_metrics import ModelMetrics, ProviderConfig
 
-def test_add_provider():
-    model_metrics = ModelMetrics()
-    provider = LLMProvider("LLM1", [Metric("accuracy", 0.9), Metric("f1", 0.8)])
-    model_metrics.add_provider(provider)
-    assert model_metrics.get_metrics("LLM1") == provider.metrics
+def test_get_provider():
+    providers = {
+        "OpenAI": ProviderConfig("https://api.openai.com", {"api_key": "key1"}),
+        "Anthropic": ProviderConfig("https://api.anthropic.com", {"api_key": "key2"}),
+    }
+    model_metrics = ModelMetrics(providers)
+    assert model_metrics.get_provider("OpenAI").endpoint == "https://api.openai.com"
 
 def test_get_metrics():
-    model_metrics = ModelMetrics()
-    provider = LLMProvider("LLM1", [Metric("accuracy", 0.9), Metric("f1", 0.8)])
-    model_metrics.add_provider(provider)
-    assert model_metrics.get_metrics("LLM1") == provider.metrics
+    providers = {
+        "OpenAI": ProviderConfig("https://api.openai.com", {"api_key": "key1"}),
+    }
+    model_metrics = ModelMetrics(providers)
+    metrics = model_metrics.get_metrics("OpenAI", "model1")
+    assert metrics == {"metric1": "value1", "metric2": "value2"}
 
-def test_calculate_average():
-    model_metrics = ModelMetrics()
-    provider = LLMProvider("LLM1", [Metric("accuracy", 0.9), Metric("accuracy", 0.8)])
-    model_metrics.add_provider(provider)
-    assert model_metrics.calculate_average("LLM1", "accuracy") == 0.85
+def test_compare_providers():
+    providers = {
+        "OpenAI": ProviderConfig("https://api.openai.com", {"api_key": "key1"}),
+        "Anthropic": ProviderConfig("https://api.anthropic.com", {"api_key": "key2"}),
+    }
+    model_metrics = ModelMetrics(providers)
+    metrics = model_metrics.compare_providers("model1")
+    assert metrics["OpenAI"] == {"metric1": "value1", "metric2": "value2"}
+    assert metrics["Anthropic"] == {"metric1": "value1", "metric2": "value2"}
 
-def test_calculate_average_no_metrics():
-    model_metrics = ModelMetrics()
-    provider = LLMProvider("LLM1", [Metric("accuracy", 0.9)])
-    model_metrics.add_provider(provider)
+def test_get_provider_not_found():
+    providers = {
+        "OpenAI": ProviderConfig("https://api.openai.com", {"api_key": "key1"}),
+    }
+    model_metrics = ModelMetrics(providers)
     with pytest.raises(ValueError):
-        model_metrics.calculate_average("LLM1", "f1")
+        model_metrics.get_provider("Azure")
 
-def test_to_json():
-    model_metrics = ModelMetrics()
-    provider = LLMProvider("LLM1", [Metric("accuracy", 0.9), Metric("f1", 0.8)])
-    model_metrics.add_provider(provider)
-    expected_json = '{"LLM1": [{"name": "accuracy", "value": 0.9}, {"name": "f1", "value": 0.8}]}'
-    assert model_metrics.to_json() == expected_json
+def test_get_metrics_provider_not_found():
+    providers = {
+        "OpenAI": ProviderConfig("https://api.openai.com", {"api_key": "key1"}),
+    }
+    model_metrics = ModelMetrics(providers)
+    with pytest.raises(ValueError):
+        model_metrics.get_metrics("Azure", "model1")

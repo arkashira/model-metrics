@@ -1,2 +1,3 @@
-# Auth Project
-This project provides a basic authentication system with email verification and password complexity checks.
+# Model Metrics
+A Python package for comparing model metrics from different providers.
+## Installation
