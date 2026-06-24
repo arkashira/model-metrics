@@ -1,29 +1,36 @@
 import json
 from dataclasses import dataclass
-from typing import Dict
+from datetime import datetime, timedelta
+from uuid import uuid4
 
 @dataclass
-class ProviderConfig:
-    endpoint: str
-    credentials: Dict[str, str]
+class BenchmarkSuite:
+    id: str
+    results: dict
 
 class ModelMetrics:
-    def __init__(self, providers: Dict[str, ProviderConfig]):
-        self.providers = providers
+    def __init__(self):
+        self.suites = {}
+        self.tokens = {}
 
-    def get_provider(self, provider_name: str) -> ProviderConfig:
-        if provider_name not in self.providers:
-            raise ValueError(f"Provider {provider_name} not found")
-        return self.providers.get(provider_name)
+    def create_suite(self, results):
+        suite_id = str(uuid4())
+        self.suites[suite_id] = BenchmarkSuite(suite_id, results)
+        return suite_id
 
-    def get_metrics(self, provider_name: str, model_name: str) -> Dict[str, str]:
-        provider = self.get_provider(provider_name)
-        # Simulate a request to the provider endpoint
-        # In a real implementation, you would make an HTTP request here
-        return {"metric1": "value1", "metric2": "value2"}
+    def generate_share_link(self, suite_id):
+        token = str(uuid4())
+        self.tokens[token] = suite_id
+        return f"https://example.com/{suite_id}/{token}"
 
-    def compare_providers(self, model_name: str) -> Dict[str, Dict[str, str]]:
-        metrics = {}
-        for provider_name, provider in self.providers.items():
-            metrics[provider_name] = self.get_metrics(provider_name, model_name)
-        return metrics
+    def get_results(self, suite_id, token):
+        if token not in self.tokens or self.tokens[token] != suite_id:
+            raise ValueError("Invalid token")
+        if suite_id not in self.suites:
+            raise ValueError("Suite not found")
+        return self.suites[suite_id].results
+
+    def revoke_link(self, suite_id, token):
+        if token not in self.tokens or self.tokens[token] != suite_id:
+            raise ValueError("Invalid token")
+        del self.tokens[token]
